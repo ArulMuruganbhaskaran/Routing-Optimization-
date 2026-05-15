@@ -1,0 +1,270 @@
+@startuml Route Optimization Deployment Diagram
+
+' ==========================================
+' DEPLOYMENT ARCHITECTURE
+' ==========================================
+
+node "Client Device" <<device>> {
+  
+  node "Web Browser" <<execution environment>> {
+    
+    artifact "demo-route-finder.html" <<HTML5>> {
+      component "User Interface" as UI {
+        [Source Input 🎤]
+        [Destination Input 🎤]
+        [Travel Mode Selector]
+        [Find Route Button]
+        [Route Info Panel]
+        [Speak Button 🔊]
+      }
+      
+      component "Leaflet Map" as Map {
+        [OpenStreetMap Tiles]
+        [Marker Renderer]
+        [Polyline Renderer]
+        [Animation Engine]
+      }
+      
+      component "Voice Controller" as Voice {
+        [Speech Recognition]
+        [Speech Synthesis]
+        [Voice Indicator]
+      }
+      
+      component "Business Logic" as Logic {
+        [Route Finder]
+        [City Database (JS)]
+        [Animation Controller]
+        [HTTP Client]
+      }
+    }
+    
+    UI --> Logic : user actions
+    Logic --> Map : draw route
+    Logic --> Voice : voice I/O
+    Voice --> UI : feedback
+  }
+  
+  node "Browser APIs" <<runtime>> {
+    interface "Web Speech API" as SpeechAPI
+    interface "Fetch API" as FetchAPI
+    interface "Canvas API" as CanvasAPI
+  }
+  
+  Voice ..> SpeechAPI : uses
+  Logic ..> FetchAPI : HTTP calls
+  Map ..> CanvasAPI : rendering
+}
+
+node "Local Server" <<device>> {
+  
+  node "Java Runtime Environment\n(JRE 11+)" <<execution environment>> {
+    
+    artifact "RouteServer.jar" <<executable>> {
+      component "HTTP Server" as HTTPServer {
+        [Request Handler]
+        [CORS Manager]
+        [JSON Builder]
+      }
+      
+      component "Graph Engine" as GraphEngine {
+        [Graph.class]
+        [Node.class (x53)]
+        [Edge.class (x100+)]
+      }
+      
+      component "Algorithm Engine" as AlgoEngine {
+        [Dijkstra Algorithm]
+        [Priority Queue]
+        [Path Interpolator]
+      }
+      
+      component "Data Store" as DataStore {
+        [City Coordinates]
+        [Road Network]
+        [Distance Matrix]
+      }
+    }
+    
+    HTTPServer --> GraphEngine : query
+    GraphEngine --> AlgoEngine : calculate
+    AlgoEngine --> DataStore : read
+  }
+  
+  interface "HTTP :8080" as HTTP8080
+  HTTPServer - HTTP8080
+}
+
+node "External Services" <<cloud>> {
+  
+  component "OpenStreetMap\nTile Server" as OSM {
+    [Map Tiles]
+    [Geographic Data]
+  }
+  
+  component "Browser Speech\nServices" as BrowserSpeech {
+    [Google Speech API]
+    [Web Speech Polyfill]
+  }
+}
+
+' ==========================================
+' COMMUNICATION PATHS
+' ==========================================
+
+Logic ..> HTTP8080 : "HTTP GET\n/route?source=lat,lng\n&destination=lat,lng"
+HTTP8080 ..> Logic : "JSON Response\n{status, distance, path}"
+
+Map ..> OSM : "HTTPS\nTile Requests"
+OSM ..> Map : "PNG Tiles"
+
+Voice ..> BrowserSpeech : "Speech Recognition\nSpeech Synthesis"
+
+' ==========================================
+' DEPLOYMENT NOTES
+' ==========================================
+
+note right of "Client Device"
+  **Client Requirements:**
+  - Modern Browser
+    (Chrome, Edge recommended)
+  - Microphone (optional)
+  - Speakers (optional)
+  - Internet (for map tiles)
+  
+  **Supported Platforms:**
+  - Windows 10/11
+  - macOS
+  - Linux
+  - Android/iOS
+end note
+
+note left of "Local Server"
+  **Server Requirements:**
+  - Java 11 or higher
+  - Port 8080 available
+  - Localhost access
+  
+  **Resources:**
+  - RAM: ~50 MB
+  - CPU: Minimal
+  - Storage: ~5 MB
+  
+  **Startup:**
+  java RouteServer
+end note
+
+note bottom of HTTPServer
+  **API Endpoint:**
+  http://localhost:8080/route
+  
+  **Request Parameters:**
+  - source: lat,lng
+  - destination: lat,lng
+  
+  **Response Format:**
+  JSON with path coordinates,
+  distance, duration, nodes
+  
+  **CORS:** Enabled (*)
+end note
+
+note top of DataStore
+  **Static Data:**
+  - 15 Major Cities
+  - 38 Tamil Nadu Districts
+  - 100+ Road Connections
+  
+  **No Database Required**
+  All data loaded in memory
+  at server startup
+end note
+
+' ==========================================
+' NETWORK PROTOCOLS
+' ==========================================
+
+package "Network Layer" {
+  protocol HTTP {
+    port : 8080
+    method : GET
+    format : JSON
+  }
+  
+  protocol HTTPS {
+    port : 443
+    usage : OSM Tiles
+  }
+  
+  protocol WebSocket {
+    status : Not Used
+  }
+}
+
+Logic ..> HTTP : uses
+Map ..> HTTPS : uses
+
+' ==========================================
+' PHYSICAL DEPLOYMENT
+' ==========================================
+
+frame "Physical Deployment Scenario" {
+  
+  node "User's Computer" as PC {
+    [Windows PC]
+    [Browser: Chrome]
+    [demo-route-finder.html]
+    [Java Server (Port 8080)]
+  }
+  
+  cloud "Internet" as Internet {
+    [OpenStreetMap Servers]
+    [Google Speech Services]
+  }
+  
+  PC ..> Internet : HTTPS
+  
+  note right of PC
+    **Single Machine Setup:**
+    Both client and server
+    run on same machine
+    
+    Communication via
+    localhost (127.0.0.1)
+  end note
+}
+
+' ==========================================
+' ALTERNATIVE DEPLOYMENT
+' ==========================================
+
+frame "Network Deployment Scenario" {
+  
+  node "Client Machine 1" as Client1 {
+    [Browser + HTML]
+  }
+  
+  node "Client Machine 2" as Client2 {
+    [Browser + HTML]
+  }
+  
+  node "Server Machine" as Server {
+    [Java RouteServer]
+    [Port: 8080]
+    [IP: 192.168.1.100]
+  }
+  
+  Client1 ..> Server : "HTTP\n192.168.1.100:8080"
+  Client2 ..> Server : "HTTP\n192.168.1.100:8080"
+  
+  note bottom of Server
+    **Network Deployment:**
+    Multiple clients can
+    connect to single server
+    
+    Update JAVA_API_URL
+    in HTML to server IP
+  end note
+}
+
+@enduml

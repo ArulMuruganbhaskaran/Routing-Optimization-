@@ -1,0 +1,278 @@
+@startuml Route Optimization Sequence Diagram
+
+' ==========================================
+' ACTORS AND PARTICIPANTS
+' ==========================================
+actor User as user
+participant "Browser UI\n(HTML)" as ui
+participant "Voice Input\n(Speech API)" as voice
+participant "Fetch API" as fetch
+participant "Route Server\n(Java :8080)" as server
+participant "Graph" as graph
+participant "Dijkstra\nAlgorithm" as dijkstra
+participant "Leaflet Map" as map
+participant "Voice Output\n(TTS)" as tts
+database "City Database\n(53 locations)" as db
+
+' ==========================================
+' SEQUENCE FLOW
+' ==========================================
+
+== User Input Phase ==
+
+user -> ui : Click 🎤 microphone button
+activate ui
+
+ui -> voice : startVoiceInput('source')
+activate voice
+
+voice -> user : Request microphone permission
+user --> voice : Grant permission
+
+voice -> voice : Start listening
+note right: Show "🎤 Listening..." modal
+
+user -> voice : Speak "Chennai"
+voice -> voice : Process speech → text
+voice -> ui : Auto-fill source field
+deactivate voice
+
+ui -> tts : speak("Got it. Chennai")
+activate tts
+tts -> user : 🔊 Audio feedback
+deactivate tts
+
+user -> ui : Click 🎤 for destination
+ui -> voice : startVoiceInput('destination')
+activate voice
+
+user -> voice : Speak "Kanyakumari"
+voice -> ui : Auto-fill destination field
+deactivate voice
+
+user -> ui : Select travel mode (Car/Bike/Walk)
+user -> ui : Click "Find Shortest Route"
+
+== Route Calculation Phase ==
+
+ui -> ui : getCityCoords('Chennai')
+ui -> ui : getCityCoords('Kanyakumari')
+
+ui -> tts : speak("Finding route from Chennai to Kanyakumari")
+activate tts
+tts -> user : 🔊 Audio narration
+deactivate tts
+
+ui -> fetch : GET /route?source=13.08,80.27&destination=8.08,77.53
+activate fetch
+
+fetch -> server : HTTP Request
+activate server
+
+server -> server : parseQueryParams()
+note right
+  Extract:
+  - source: 13.08,80.27
+  - destination: 8.08,77.53
+end note
+
+server -> graph : findNearestNode(13.08, 80.27)
+activate graph
+graph -> db : Query nodes
+activate db
+db --> graph : Node: Chennai
+deactivate db
+graph --> server : startNode
+deactivate graph
+
+server -> graph : findNearestNode(8.08, 77.53)
+activate graph
+graph -> db : Query nodes
+activate db
+db --> graph : Node: Kanyakumari
+deactivate db
+graph --> server : endNode
+deactivate graph
+
+server -> dijkstra : findShortestPath(Chennai, Kanyakumari)
+activate dijkstra
+
+dijkstra -> graph : getNodes()
+graph --> dijkstra : All 53 nodes
+
+dijkstra -> dijkstra : Initialize priority queue
+dijkstra -> dijkstra : Set distance[Chennai] = 0
+
+loop For each node in priority queue
+  dijkstra -> graph : getEdges(currentNode)
+  graph --> dijkstra : Adjacent edges
+  
+  dijkstra -> dijkstra : Calculate distances
+  note right
+    **Dijkstra's Algorithm:**
+    1. Pop minimum distance node
+    2. For each neighbor:
+       - Calculate new distance
+       - Update if shorter
+    3. Track previous nodes
+    4. Repeat until destination
+  end note
+end
+
+dijkstra -> dijkstra : reconstructPath()
+note right
+  Path found:
+  Chennai → Vellore → 
+  Tirupathur → Krishnagiri →
+  Dharmapuri → Salem →
+  Namakkal → Karur →
+  Dindigul → Theni →
+  Tenkasi → Kanyakumari
+end note
+
+dijkstra -> dijkstra : getDetailedPathCoordinates(10)
+note right
+  Interpolate 10 points
+  between each city pair
+  for smooth animation
+end note
+
+dijkstra --> server : Result (path, distance, duration)
+deactivate dijkstra
+
+server -> server : buildJsonResponse()
+note right
+  {
+    "status": "success",
+    "distance": 875.0,
+    "duration": 875.0,
+    "pathNodes": 12,
+    "pathPoints": 111,
+    "path": [[13.08,80.27], ...]
+  }
+end note
+
+server -> server : enableCORS()
+server --> fetch : JSON Response
+deactivate server
+
+fetch --> ui : Route data
+deactivate fetch
+
+== Route Visualization Phase ==
+
+ui -> map : Clear existing layers
+activate map
+map --> ui : Cleared
+deactivate map
+
+ui -> map : addMarker(Chennai, green icon)
+activate map
+map --> ui : Start marker created
+deactivate map
+
+ui -> map : addMarker(Kanyakumari, red icon)
+activate map
+map --> ui : End marker created
+deactivate map
+
+ui -> map : addPolyline(path, purple)
+activate map
+map --> ui : Route drawn
+deactivate map
+
+ui -> map : fitBounds(route)
+activate map
+map -> user : 🗺️ Display route on map
+deactivate map
+
+ui -> ui : Display route info panel
+note right
+  📊 Route Information:
+  - Cities: 12
+  - Waypoints: 111
+  - Distance: 875 km
+  - Duration: 14h 35m
+  - Mode: CAR
+end note
+
+== Animation Phase ==
+
+ui -> map : Create animated marker 🚗
+activate map
+
+loop Animation Loop (requestAnimationFrame)
+  ui -> ui : animateMarker(currentTime)
+  ui -> ui : Calculate position with deltaTime
+  ui -> map : updateMarkerPosition(lat, lng)
+  map -> user : 🚗 Show moving marker
+  
+  alt Animation complete
+    ui -> ui : Stop animation
+  end
+end
+
+deactivate map
+
+== Voice Narration Phase ==
+
+ui -> tts : speakRouteInfo()
+activate tts
+
+tts -> tts : Generate narration text
+note right
+  "Your route from Chennai to 
+  Kanyakumari is ready. Distance 
+  is 875 kilometers. Estimated 
+  time is 14 hours 35 minutes. 
+  You are traveling by CAR. 
+  The route passes through 12 
+  cities. Animation has started. 
+  Have a safe journey!"
+end note
+
+tts -> user : 🔊 Speak route details
+deactivate tts
+
+== User Interaction (Repeat Narration) ==
+
+user -> ui : Click "🔊 Speak" button
+ui -> tts : speakRouteInfo()
+activate tts
+tts -> user : 🔊 Repeat narration
+deactivate tts
+
+deactivate ui
+
+== Error Handling Flows ==
+
+alt City Not Found
+  ui -> ui : getCityCoords(invalidCity)
+  ui -> tts : speak("City not found...")
+  activate tts
+  tts -> user : 🔊 Error message
+  deactivate tts
+  ui -> user : Alert dialog
+end
+
+alt Voice Recognition Error
+  voice -> voice : onerror event
+  voice -> ui : Error callback
+  ui -> tts : speak("Voice recognition failed")
+  activate tts
+  tts -> user : 🔊 Error message
+  deactivate tts
+end
+
+alt Server Connection Error
+  fetch -> server : ❌ Connection failed
+  server --> fetch : Network error
+  fetch --> ui : Error response
+  ui -> tts : speak("Error connecting to server")
+  activate tts
+  tts -> user : 🔊 Error message
+  deactivate tts
+  ui -> user : Alert dialog
+end
+
+@enduml

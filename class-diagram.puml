@@ -1,0 +1,292 @@
+@startuml Route Optimization Class Diagram
+
+' ==========================================
+' JAVA BACKEND CLASSES
+' ==========================================
+
+package "com.route.server" {
+  
+  class RouteServer {
+    - {static} PORT : int = 8080
+    - graph : Graph
+    - server : HttpServer
+    --
+    + {static} main(String[] args) : void
+    + start() : void
+    - handleRequest(HttpExchange exchange) : void
+    - parseQueryParams(String query) : Map<String, String>
+    - buildJsonResponse(Result result) : String
+    - enableCORS(HttpExchange exchange) : void
+    - sendResponse(HttpExchange, int, String) : void
+  }
+  
+}
+
+package "com.route.graph" {
+  
+  class Graph {
+    - adjacencyList : Map<Node, List<Edge>>
+    - nodes : List<Node>
+    --
+    + Graph()
+    + addNode(Node node) : void
+    + addEdge(Node source, Node dest, double weight) : void
+    + addEdge(int sourceIdx, int destIdx, double weight) : void
+    + getEdges(Node node) : List<Edge>
+    + getNodes() : List<Node>
+    + findNearestNode(double lat, double lng) : Node
+    + loadSampleData() : void
+    + size() : int
+  }
+  
+  class Node {
+    - id : String
+    - latitude : double
+    - longitude : double
+    - name : String
+    --
+    + Node(String id, double lat, double lng, String name)
+    + getId() : String
+    + getLatitude() : double
+    + getLongitude() : double
+    + getName() : String
+    + distanceTo(Node other) : double
+    + equals(Object obj) : boolean
+    + hashCode() : int
+    + toString() : String
+    --
+    {static} - EARTH_RADIUS : double = 6371.0
+  }
+  
+  class Edge {
+    - source : Node
+    - destination : Node
+    - weight : double
+    --
+    + Edge(Node source, Node dest, double weight)
+    + getSource() : Node
+    + getDestination() : Node
+    + getWeight() : double
+    + toString() : String
+  }
+  
+}
+
+package "com.route.algorithm" {
+  
+  class DijkstraAlgorithm {
+    - graph : Graph
+    --
+    + DijkstraAlgorithm(Graph graph)
+    + findShortestPath(Node start, Node end) : Result
+    + getDetailedPathCoordinates(int pointsPerSegment) : List<double[]>
+    - reconstructPath(Map<Node, Node> prev, Node end) : List<Node>
+    - interpolate(double start, double end, double fraction) : double
+  }
+  
+  class Result {
+    - path : List<Node>
+    - distance : double
+    - duration : double
+    --
+    + Result(List<Node> path, double dist, double dur)
+    + getPath() : List<Node>
+    + getDistance() : double
+    + getDuration() : double
+    + getPathCoordinates() : List<double[]>
+    + setPath(List<Node> path) : void
+    + setDistance(double distance) : void
+    + setDuration(double duration) : void
+  }
+  
+  class NodeDistance {
+    - node : Node
+    - distance : double
+    --
+    + NodeDistance(Node node, double distance)
+    + getNode() : Node
+    + getDistance() : double
+    + compareTo(NodeDistance other) : int
+  }
+  
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+
+RouteServer --> Graph : uses
+RouteServer --> DijkstraAlgorithm : creates
+RouteServer ..> Result : receives
+
+Graph "1" *-- "53" Node : contains
+Graph "1" *-- "100+" Edge : manages
+
+Edge "1" --> "1" Node : source
+Edge "1" --> "1" Node : destination
+
+DijkstraAlgorithm --> Graph : operates on
+DijkstraAlgorithm ..> Result : returns
+DijkstraAlgorithm ..> NodeDistance : uses internally
+
+Result "1" *-- "1..*" Node : path
+
+' ==========================================
+' FRONTEND JAVASCRIPT CLASSES
+' ==========================================
+
+package "Frontend (JavaScript)" {
+  
+  class RouteFinderApp <<singleton>> {
+    - map : L.Map
+    - currentMode : string = 'car'
+    - routeLayer : L.Polyline
+    - animatedMarker : L.Marker
+    - animationFrameId : number
+    - recognition : SpeechRecognition
+    - speechSynthesis : SpeechSynthesis
+    - routeData : Object
+    --
+    + initMap() : void
+    + findRoute() : void
+    + displayRoute(data, sourceLat, sourceLng, destLat, destLng) : void
+    + startAnimation(path) : void
+    + animateMarker(currentTime) : void
+    + clearMap() : void
+    + setMode(mode) : void
+  }
+  
+  class VoiceController {
+    - recognition : SpeechRecognition
+    - currentVoiceTarget : string
+    --
+    + initVoiceRecognition() : void
+    + startVoiceInput(target) : void
+    + stopVoiceInput() : void
+    + cleanCityName(text) : string
+    + speak(text, rate) : void
+    + speakRouteInfo() : void
+  }
+  
+  class CityDatabase {
+    - {static} CITY_COORDS : Map<string, [number, number]>
+    --
+    + {static} getCityCoords(cityName) : [number, number]
+    + {static} populateCityList() : void
+  }
+  
+  class AnimationController {
+    - currentIndex : number
+    - lastTime : number
+    - speed : number
+    --
+    + startAnimation(path) : void
+    + animateMarker(currentTime) : void
+    + calculatePosition(index, fraction) : [number, number]
+  }
+  
+  class UIController {
+    + showLoading(show) : void
+    + displayRouteInfo(data) : void
+    + clearMap() : void
+    + calculateDuration(minutes) : string
+  }
+  
+}
+
+RouteFinderApp --> VoiceController : uses
+RouteFinderApp --> CityDatabase : queries
+RouteFinderApp --> AnimationController : controls
+RouteFinderApp --> UIController : updates
+
+RouteFinderApp ..> RouteServer : HTTP request
+
+' ==========================================
+' DATA TRANSFER OBJECTS
+' ==========================================
+
+package "Data Transfer" {
+  
+  class HTTPRequest <<DTO>> {
+    + method : string = "GET"
+    + url : string = "/route"
+    + params : QueryParams
+  }
+  
+  class QueryParams <<DTO>> {
+    + source : string
+    + destination : string
+  }
+  
+  class HTTPResponse <<DTO>> {
+    + status : string
+    + distance : double
+    + duration : double
+    + pathNodes : int
+    + pathPoints : int
+    + path : Array<[double, double]>
+  }
+  
+}
+
+HTTPRequest --> QueryParams
+RouteServer ..> HTTPRequest : receives
+RouteServer ..> HTTPResponse : sends
+RouteFinderApp ..> HTTPRequest : sends
+RouteFinderApp ..> HTTPResponse : receives
+
+' ==========================================
+' NOTES
+' ==========================================
+
+note right of Graph
+  **Data Structure:**
+  - Adjacency List representation
+  - HashMap for O(1) lookup
+  - ArrayList for node storage
+  
+  **Locations:**
+  - 15 major Indian cities
+  - 38 Tamil Nadu districts
+  Total: 53 nodes
+end note
+
+note right of DijkstraAlgorithm
+  **Algorithm Complexity:**
+  - Time: O((V + E) log V)
+  - Space: O(V)
+  
+  **Features:**
+  - Priority Queue optimization
+  - Haversine distance
+  - Path interpolation
+  - Bidirectional edges
+end note
+
+note bottom of Node
+  **Haversine Formula:**
+  Calculates great-circle distance
+  between two GPS coordinates
+  on Earth's surface
+  
+  Returns distance in kilometers
+end note
+
+note left of RouteFinderApp
+  **Browser APIs Used:**
+  - Leaflet.js (mapping)
+  - Web Speech API (voice I/O)
+  - Fetch API (HTTP requests)
+  - requestAnimationFrame (animation)
+end note
+
+note top of VoiceController
+  **Voice Features:**
+  - Speech Recognition (STT)
+  - Speech Synthesis (TTS)
+  - Language: en-IN
+  - Auto-fill input fields
+  - Route narration
+end note
+
+@enduml

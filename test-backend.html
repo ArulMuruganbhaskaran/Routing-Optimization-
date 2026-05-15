@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Java Backend</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0ea5a3;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #0ea5a3, #06b6d4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 165, 163, 0.3);
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .success { color: #22c55e; font-weight: 600; }
+        .error { color: #ef4444; font-weight: 600; }
+        .info { color: #3b82f6; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Java Backend Test</h1>
+        <p>Click the buttons below to test your Java server endpoints:</p>
+        
+        <button onclick="testServerStatus()">1. Test Server Status</button>
+        <button onclick="testDelhiToMumbai()">2. Delhi → Mumbai</button>
+        <button onclick="testBangaloreToChennai()">3. Bangalore → Chennai</button>
+        <button onclick="testCustomRoute()">4. Custom Route</button>
+        
+        <h3>Response:</h3>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8080';
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = message;
+            const p = document.createElement('p');
+            p.appendChild(span);
+            output.appendChild(p);
+        }
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        async function testServerStatus() {
+            clearOutput();
+            log('Testing server status...', 'info');
+            
+            try {
+                const response = await fetch(BACKEND_URL);
+                const data = await response.json();
+                log('✅ Server is running!', 'success');
+                log('Response:');
+                output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                log('❌ Server is not running!', 'error');
+                log('Error: ' + error.message, 'error');
+                log('Make sure you started the Java server with: java RouteServer', 'info');
+            }
+        }
+
+        async function testDelhiToMumbai() {
+            clearOutput();
+            log('Testing route: Delhi → Mumbai', 'info');
+            
+            const url = `${BACKEND_URL}/route?source=28.6139,77.2090&destination=19.0760,72.8777`;
+            log('Request URL: ' + url);
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    log('✅ Route calculated successfully!', 'success');
+                    log(`Distance: ${data.distance.toFixed(1)} km`);
+                    log(`Duration: ${data.duration.toFixed(1)} minutes`);
+                    log(`Waypoints: ${data.path.length} cities`);
+                } else {
+                    log('❌ Route calculation failed', 'error');
+                }
+                
+                output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                log('❌ Request failed!', 'error');
+                log('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function testBangaloreToChennai() {
+            clearOutput();
+            log('Testing route: Bangalore → Chennai', 'info');
+            
+            const url = `${BACKEND_URL}/route?source=12.9716,77.5946&destination=13.0827,80.2707`;
+            log('Request URL: ' + url);
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    log('✅ Route calculated successfully!', 'success');
+                    log(`Distance: ${data.distance.toFixed(1)} km`);
+                    log(`Duration: ${data.duration.toFixed(1)} minutes`);
+                    log(`Waypoints: ${data.path.length} cities`);
+                } else {
+                    log('❌ Route calculation failed', 'error');
+                }
+                
+                output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                log('❌ Request failed!', 'error');
+                log('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function testCustomRoute() {
+            clearOutput();
+            const sourceLat = prompt('Enter source latitude:', '28.6139');
+            const sourceLng = prompt('Enter source longitude:', '77.2090');
+            const destLat = prompt('Enter destination latitude:', '19.0760');
+            const destLng = prompt('Enter destination longitude:', '72.8777');
+            
+            if (!sourceLat || !sourceLng || !destLat || !destLng) {
+                log('❌ Cancelled', 'error');
+                return;
+            }
+            
+            log('Testing custom route...', 'info');
+            
+            const url = `${BACKEND_URL}/route?source=${sourceLat},${sourceLng}&destination=${destLat},${destLng}`;
+            log('Request URL: ' + url);
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    log('✅ Route calculated successfully!', 'success');
+                    log(`Distance: ${data.distance.toFixed(1)} km`);
+                    log(`Duration: ${data.duration.toFixed(1)} minutes`);
+                    log(`Waypoints: ${data.path.length} cities`);
+                } else {
+                    log('❌ Route calculation failed', 'error');
+                }
+                
+                output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                log('❌ Request failed!', 'error');
+                log('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testServerStatus, 500);
+        });
+    </script>
+</body>
+</html>

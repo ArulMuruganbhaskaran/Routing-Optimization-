@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🗺️ Route Finder - Dijkstra Algorithm Demo</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;">
+
+  <!-- Header -->
+  <div style="background:rgba(255,255,255,0.95);padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.15);backdrop-filter:blur(10px);">
+    <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h1 style="margin:0;font-size:32px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">🗺️ Route Optimization</h1>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:#888;">Algorithm</div>
+        <div style="font-size:18px;font-weight:700;color:#667eea;">Dijkstra</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div style="max-width:1200px;margin:30px auto;padding:0 20px;">
+    
+    <!-- Control Panel Card -->
+    <div style="background:rgba(255,255,255,0.98);border-radius:20px;padding:30px;box-shadow:0 10px 40px rgba(0,0,0,0.2);margin-bottom:30px;">
+      
+      <!-- Input Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+        <div>
+          <label style="display:block;margin-bottom:10px;font-weight:700;color:#333;font-size:14px;text-transform:uppercase;letter-spacing:0.5px;">📍 Source Location</label>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input type="text" id="sourceCity" placeholder="Enter city name or speak..." list="cityList" style="flex:1;padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;margin-bottom:8px;transition:border-color 0.3s ease;outline:none;" />
+            <button id="sourceMic" onclick="startVoiceInput('source')" style="width:50px;height:50px;border:2px solid #667eea;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:10px;cursor:pointer;font-size:24px;margin-bottom:8px;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(102,126,234,0.3);" title="Voice Input">🎤</button>
+          </div>
+          <datalist id="cityList">
+            <option value="Delhi">
+            <option value="Mumbai">
+            <option value="Bangalore">
+            <option value="Kolkata">
+            <option value="Chennai">
+            <option value="Hyderabad">
+            <option value="Pune">
+            <option value="Ahmedabad">
+            <option value="Jaipur">
+            <option value="Lucknow">
+            <option value="Surat">
+            <option value="Indore">
+            <option value="Nagpur">
+            <option value="Bhopal">
+            <option value="Vadodara">
+            <option value="Ariyalur">
+            <option value="Chengalpattu">
+            <option value="Coimbatore">
+            <option value="Cuddalore">
+            <option value="Dharmapuri">
+            <option value="Dindigul">
+            <option value="Erode">
+            <option value="Kallakurichi">
+            <option value="Kanchipuram">
+            <option value="Kanyakumari">
+            <option value="Karur">
+            <option value="Krishnagiri">
+            <option value="Madurai">
+            <option value="Mayiladuthurai">
+            <option value="Nagapattinam">
+            <option value="Namakkal">
+            <option value="Nilgiris">
+            <option value="Perambalur">
+            <option value="Pudukkottai">
+            <option value="Ramanathapuram">
+            <option value="Ranipet">
+            <option value="Salem">
+            <option value="Sivaganga">
+            <option value="Tenkasi">
+            <option value="Thanjavur">
+            <option value="Theni">
+            <option value="Thoothukudi">
+            <option value="Tiruchirappalli">
+            <option value="Tirunelveli">
+            <option value="Tirupathur">
+            <option value="Tiruppur">
+            <option value="Tiruvallur">
+            <option value="Tiruvannamalai">
+            <option value="Tiruvarur">
+            <option value="Vellore">
+            <option value="Viluppuram">
+            <option value="Virudhunagar">
+          </datalist>
+          <div style="margin-top:8px;font-size:12px;color:#888;">Quick: <span style="color:#667eea;cursor:pointer;" onclick="document.getElementById('sourceCity').value='Chennai'">Chennai</span> | <span style="color:#667eea;cursor:pointer;" onclick="document.getElementById('sourceCity').value='Coimbatore'">Coimbatore</span> | <span style="color:#667eea;cursor:pointer;" onclick="document.getElementById('sourceCity').value='Madurai'">Madurai</span></div>
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:10px;font-weight:700;color:#333;font-size:14px;text-transform:uppercase;letter-spacing:0.5px;">🎯 Destination</label>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input type="text" id="destCity" placeholder="Enter city name or speak..." list="cityList" style="flex:1;padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;margin-bottom:8px;transition:border-color 0.3s ease;outline:none;" />
+            <button id="destMic" onclick="startVoiceInput('destination')" style="width:50px;height:50px;border:2px solid #764ba2;background:linear-gradient(135deg,#764ba2,#667eea);color:white;border-radius:10px;cursor:pointer;font-size:24px;margin-bottom:8px;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(118,75,162,0.3);" title="Voice Input">🎤</button>
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:#888;">Quick: <span style="color:#764ba2;cursor:pointer;" onclick="document.getElementById('destCity').value='Kanyakumari'">Kanyakumari</span> | <span style="color:#764ba2;cursor:pointer;" onclick="document.getElementById('destCity').value='Tiruchirappalli'">Trichy</span> | <span style="color:#764ba2;cursor:pointer;" onclick="document.getElementById('destCity').value='Salem'">Salem</span></div>
+        </div>
+      </div>
+
+      <!-- Travel Mode Selection -->
+      <div style="margin-bottom:25px;">
+        <label style="display:block;margin-bottom:12px;font-weight:700;color:#333;font-size:14px;text-transform:uppercase;letter-spacing:0.5px;">🚗 Travel Mode</label>
+        <div style="display:flex;gap:15px;">
+          <button id="modeCar" onclick="setMode('car')" style="flex:1;padding:16px;border:3px solid #667eea;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:12px;cursor:pointer;font-weight:700;font-size:15px;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(102,126,234,0.4);">
+            🚗 Car
+          </button>
+          <button id="modeBike" onclick="setMode('bike')" style="flex:1;padding:16px;border:3px solid #e0e0e0;background:white;color:#666;border-radius:12px;cursor:pointer;font-weight:700;font-size:15px;transition:all 0.3s ease;">
+            🚴 Bike
+          </button>
+          <button id="modeWalk" onclick="setMode('walk')" style="flex:1;padding:16px;border:3px solid #e0e0e0;background:white;color:#666;border-radius:12px;cursor:pointer;font-weight:700;font-size:15px;transition:all 0.3s ease;">
+            🚶 Walk
+          </button>
+        </div>
+      </div>
+
+      <!-- Find Route Button -->
+      <button id="findBtn" onclick="findRoute()" style="width:100%;padding:18px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;transition:all 0.3s ease;box-shadow:0 6px 20px rgba(102,126,234,0.4);text-transform:uppercase;letter-spacing:1px;">
+        🔍 Find Shortest Route
+      </button>
+    </div>
+
+    <!-- Map Container -->
+    <div style="background:white;border-radius:20px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.2);position:relative;height:550px;">
+      <div id="map" style="width:100%;height:100%;"></div>
+      
+      <!-- Loading Overlay -->
+      <div id="loading" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,0.98);padding:30px 40px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.3);text-align:center;z-index:1000;">
+        <div style="width:50px;height:50px;border:5px solid #f3f3f3;border-top:5px solid #667eea;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px auto;"></div>
+        <div id="loadingText" style="font-weight:700;color:#333;font-size:16px;">Calculating route...</div>
+      </div>
+    </div>
+
+    <!-- Route Info Card -->
+    <div id="routeInfo" style="display:none;margin-top:30px;background:rgba(255,255,255,0.98);border-radius:20px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+        <h3 style="margin:0;font-size:20px;color:#333;">📊 Route Information</h3>
+        <button id="speakBtn" onclick="speakRouteInfo()" style="padding:12px 20px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;transition:all 0.3s ease;box-shadow:0 4px 15px rgba(16,185,129,0.3);" title="Read aloud">
+          🔊 Speak
+        </button>
+      </div>
+      <div id="routeDetails" style="font-size:15px;line-height:1.8;color:#666;"></div>
+    </div>
+  </div>
+
+  <!-- Voice Listening Indicator -->
+  <div id="voiceIndicator" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(102,126,234,0.95);padding:40px 60px;border-radius:20px;box-shadow:0 15px 50px rgba(0,0,0,0.4);text-align:center;z-index:2000;backdrop-filter:blur(10px);">
+    <div style="width:80px;height:80px;border:6px solid #fff;border-top:6px solid transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px auto;"></div>
+    <div style="font-size:24px;color:white;font-weight:700;margin-bottom:10px;">🎤 Listening...</div>
+    <div id="voiceText" style="font-size:16px;color:rgba(255,255,255,0.9);"></div>
+    <button onclick="stopVoiceInput()" style="margin-top:20px;padding:12px 30px;background:rgba(255,255,255,0.2);color:white;border:2px solid white;border-radius:10px;cursor:pointer;font-weight:700;font-size:14px;transition:all 0.3s ease;">Cancel</button>
+  </div>
+
+  <!-- Animation Keyframes -->
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    input:focus { border-color:#667eea !important; }
+    button:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(102,126,234,0.5); }
+    #sourceMic:hover, #destMic:hover { transform:scale(1.1) !important; }
+    #sourceMic:active, #destMic:active { transform:scale(0.95) !important; }
+    #speakBtn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(16,185,129,0.5); }
+  </style>
+
+  <script>
+    // ========================================
+    // CONFIGURATION
+    // ========================================
+    const JAVA_API_URL = 'http://localhost:8080/route';
+    
+    // City Database (15 Indian cities + 38 Tamil Nadu districts)
+    const CITY_COORDS = {
+      'delhi': [28.6139, 77.2090],
+      'mumbai': [19.0760, 72.8777],
+      'bangalore': [12.9716, 77.5946],
+      'kolkata': [22.5726, 88.3639],
+      'chennai': [13.0827, 80.2707],
+      'hyderabad': [17.3850, 78.4867],
+      'pune': [18.5204, 73.8567],
+      'ahmedabad': [23.0225, 72.5714],
+      'jaipur': [26.9124, 75.7873],
+      'lucknow': [26.8467, 80.9462],
+      'surat': [21.1702, 72.8311],
+      'indore': [22.7196, 75.8577],
+      'nagpur': [21.1458, 79.0882],
+      'bhopal': [23.2599, 77.4126],
+      'vadodara': [22.3072, 73.1812],
+      // Tamil Nadu Districts
+      'ariyalur': [11.1401, 79.0770],
+      'chengalpattu': [12.6819, 79.9760],
+      'coimbatore': [11.0168, 76.9558],
+      'cuddalore': [11.7480, 79.7714],
+      'dharmapuri': [12.1211, 78.1582],
+      'dindigul': [10.3673, 77.9803],
+      'erode': [11.3410, 77.7172],
+      'kallakurichi': [11.7401, 78.9597],
+      'kanchipuram': [12.8342, 79.7036],
+      'kanyakumari': [8.0883, 77.5385],
+      'karur': [10.9601, 78.0766],
+      'krishnagiri': [12.5186, 78.2137],
+      'madurai': [9.9252, 78.1198],
+      'mayiladuthurai': [11.1028, 79.6503],
+      'nagapattinam': [10.7672, 79.8449],
+      'namakkal': [11.2189, 78.1677],
+      'nilgiris': [11.4102, 76.6950],
+      'perambalur': [11.2342, 78.8809],
+      'pudukkottai': [10.3833, 78.8000],
+      'ramanathapuram': [9.3639, 78.8370],
+      'ranipet': [12.9249, 79.3335],
+      'salem': [11.6643, 78.1460],
+      'sivaganga': [9.8433, 78.4809],
+      'tenkasi': [8.9600, 77.3152],
+      'thanjavur': [10.7870, 79.1378],
+      'theni': [10.0104, 77.4977],
+      'thoothukudi': [8.7642, 78.1348],
+      'tiruchirappalli': [10.7905, 78.7047],
+      'tirunelveli': [8.7139, 77.7567],
+      'tirupathur': [12.4986, 78.5731],
+      'tiruppur': [11.1085, 77.3411],
+      'tiruvallur': [13.1268, 79.9093],
+      'tiruvannamalai': [12.2253, 79.0747],
+      'tiruvarur': [10.7725, 79.6345],
+      'vellore': [12.9165, 79.1325],
+      'viluppuram': [11.9401, 79.4861],
+      'virudhunagar': [9.5810, 77.9624]
+    };
+    
+    let map;
+    let currentMode = 'car';
+    let routeLayer = null;
+    let animatedMarker = null;
+    let animationFrameId = null;
+    let startMarker = null;
+    let endMarker = null;
+    
+    // Voice Recognition
+    let recognition = null;
+    let currentVoiceTarget = null;
+    let speechSynthesis = window.speechSynthesis;
+    let currentUtterance = null;
+    let routeData = null;
+
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    document.addEventListener('DOMContentLoaded', initMap);
+
+    function initMap() {
+      map = L.map('map').setView([20.5937, 78.9629], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map);
+      
+      // Set default cities
+      document.getElementById('sourceCity').value = 'Chennai';
+      document.getElementById('destCity').value = 'Kanyakumari';
+      
+      // Initialize voice recognition
+      initVoiceRecognition();
+      
+      // Populate city datalist
+      populateCityList();
+    }
+    
+    function populateCityList() {
+      const datalist = document.getElementById('cityList');
+      const cities = Object.keys(CITY_COORDS).map(city => 
+        city.charAt(0).toUpperCase() + city.slice(1)
+      ).sort();
+      
+      cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        datalist.appendChild(option);
+      });
+    }
+
+    // ========================================
+    // VOICE INPUT (SPEECH-TO-TEXT)
+    // ========================================
+    function initVoiceRecognition() {
+      // Check browser support
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        console.warn('⚠️ Speech Recognition not supported in this browser');
+        document.getElementById('sourceMic').disabled = true;
+        document.getElementById('destMic').disabled = true;
+        document.getElementById('sourceMic').style.opacity = '0.5';
+        document.getElementById('destMic').style.opacity = '0.5';
+        return;
+      }
+      
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-IN'; // Indian English
+      
+      recognition.onstart = function() {
+        console.log('🎤 Voice recognition started');
+        document.getElementById('voiceIndicator').style.display = 'block';
+        document.getElementById('voiceText').textContent = 'Speak now...';
+      };
+      
+      recognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        // Show interim results
+        if (interimTranscript) {
+          document.getElementById('voiceText').textContent = interimTranscript;
+        }
+        
+        // Process final result
+        if (finalTranscript) {
+          const cleanedText = cleanCityName(finalTranscript);
+          console.log('🗣️ Recognized:', finalTranscript, '→', cleanedText);
+          
+          if (currentVoiceTarget === 'source') {
+            document.getElementById('sourceCity').value = cleanedText;
+          } else if (currentVoiceTarget === 'destination') {
+            document.getElementById('destCity').value = cleanedText;
+          }
+          
+          stopVoiceInput();
+          speak(`Got it. ${cleanedText}`);
+        }
+      };
+      
+      recognition.onerror = function(event) {
+        console.error('❌ Voice recognition error:', event.error);
+        let errorMsg = 'Voice recognition failed';
+        
+        switch(event.error) {
+          case 'no-speech':
+            errorMsg = 'No speech detected. Please try again.';
+            break;
+          case 'audio-capture':
+            errorMsg = 'Microphone not found.';
+            break;
+          case 'not-allowed':
+            errorMsg = 'Microphone permission denied.';
+            break;
+          case 'network':
+            errorMsg = 'Network error occurred.';
+            break;
+        }
+        
+        stopVoiceInput();
+        speak(errorMsg);
+        alert(errorMsg);
+      };
+      
+      recognition.onend = function() {
+        console.log('🎤 Voice recognition ended');
+      };
+    }
+    
+    function startVoiceInput(target) {
+      if (!recognition) {
+        alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+        return;
+      }
+      
+      currentVoiceTarget = target;
+      
+      try {
+        recognition.start();
+        
+        // Highlight the mic button
+        const micBtn = target === 'source' ? 'sourceMic' : 'destMic';
+        document.getElementById(micBtn).style.transform = 'scale(1.1)';
+        
+      } catch(error) {
+        console.error('Error starting recognition:', error);
+        stopVoiceInput();
+      }
+    }
+    
+    function stopVoiceInput() {
+      if (recognition) {
+        recognition.stop();
+      }
+      
+      document.getElementById('voiceIndicator').style.display = 'none';
+      
+      // Reset mic buttons
+      document.getElementById('sourceMic').style.transform = 'scale(1)';
+      document.getElementById('destMic').style.transform = 'scale(1)';
+      
+      currentVoiceTarget = null;
+    }
+    
+    function cleanCityName(text) {
+      // Remove common noise words
+      let cleaned = text.toLowerCase()
+        .replace(/\b(railway station|airport|bus stand|city|district)\b/gi, '')
+        .trim();
+      
+      // Capitalize first letter
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      
+      return cleaned;
+    }
+    
+    // ========================================
+    // VOICE OUTPUT (TEXT-TO-SPEECH)
+    // ========================================
+    function speak(text, rate = 1.0) {
+      // Stop any ongoing speech
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+      
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'en-IN';
+      currentUtterance.rate = rate;
+      currentUtterance.pitch = 1.0;
+      currentUtterance.volume = 1.0;
+      
+      // Try to find Indian English voice
+      const voices = speechSynthesis.getVoices();
+      const indianVoice = voices.find(voice => 
+        voice.lang === 'en-IN' || voice.lang.startsWith('en-')
+      );
+      
+      if (indianVoice) {
+        currentUtterance.voice = indianVoice;
+      }
+      
+      currentUtterance.onstart = function() {
+        console.log('🔊 Speaking:', text);
+      };
+      
+      currentUtterance.onerror = function(event) {
+        console.error('❌ Speech synthesis error:', event);
+      };
+      
+      speechSynthesis.speak(currentUtterance);
+    }
+    
+    function speakRouteInfo() {
+      if (!routeData) {
+        speak('No route information available.');
+        return;
+      }
+      
+      const sourceCity = document.getElementById('sourceCity').value;
+      const destCity = document.getElementById('destCity').value;
+      const mode = currentMode.toUpperCase();
+      const distance = routeData.distance.toFixed(1);
+      const duration = calculateDuration(routeData.duration);
+      const cities = routeData.pathNodes;
+      
+      const message = `Your route from ${sourceCity} to ${destCity} is ready. ` +
+                     `Distance is ${distance} kilometers. ` +
+                     `Estimated time is ${duration}. ` +
+                     `You are traveling by ${mode}. ` +
+                     `The route passes through ${cities} cities. ` +
+                     `Animation has started. Have a safe journey!`;
+      
+      speak(message, 0.95);
+    }
+
+    // ========================================
+    // TRAVEL MODE SELECTION
+    // ========================================
+    function setMode(mode) {
+      currentMode = mode;
+      ['modeCar', 'modeBike', 'modeWalk'].forEach(id => {
+        const btn = document.getElementById(id);
+        if(id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)) {
+          btn.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+          btn.style.color = 'white';
+          btn.style.borderColor = '#667eea';
+          btn.style.boxShadow = '0 4px 15px rgba(102,126,234,0.4)';
+        } else {
+          btn.style.background = 'white';
+          btn.style.color = '#666';
+          btn.style.borderColor = '#e0e0e0';
+          btn.style.boxShadow = 'none';
+        }
+      });
+    }
+
+    // ========================================
+    // CITY NAME TO COORDINATES
+    // ========================================
+    function getCityCoords(cityName) {
+      const normalized = cityName.toLowerCase().trim();
+      return CITY_COORDS[normalized] || null;
+    }
+
+    // ========================================
+    // FIND ROUTE (Main Function)
+    // ========================================
+    async function findRoute() {
+      const sourceCity = document.getElementById('sourceCity').value.trim();
+      const destCity = document.getElementById('destCity').value.trim();
+
+      if(!sourceCity || !destCity) {
+        alert('Please enter both source and destination cities!');
+        return;
+      }
+
+      // Convert city names to coordinates
+      const sourceCoords = getCityCoords(sourceCity);
+      const destCoords = getCityCoords(destCity);
+
+      if(!sourceCoords) {
+        const errorMsg = `Source city "${sourceCity}" not found! Please try: Chennai, Coimbatore, Madurai, or other Tamil Nadu cities.`;
+        alert(errorMsg);
+        speak(errorMsg);
+        return;
+      }
+
+      if(!destCoords) {
+        const errorMsg = `Destination city "${destCity}" not found! Please try: Kanyakumari, Salem, Trichy, or other Tamil Nadu cities.`;
+        alert(errorMsg);
+        speak(errorMsg);
+        return;
+      }
+
+      const sourceLat = sourceCoords[0];
+      const sourceLng = sourceCoords[1];
+      const destLat = destCoords[0];
+      const destLng = destCoords[1];
+
+      showLoading(true);
+      clearMap();
+
+      try {
+        const url = `${JAVA_API_URL}?source=${sourceLat},${sourceLng}&destination=${destLat},${destLng}`;
+        console.log('🚀 API Request:', url);
+        
+        speak(`Finding route from ${sourceCity} to ${destCity}`);
+
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log('📦 API Response:', data);
+
+        if(data.status !== 'success') {
+          throw new Error(data.message || 'Route calculation failed');
+        }
+        
+        routeData = data;
+        displayRoute(data, sourceLat, sourceLng, destLat, destLng);
+        showLoading(false);
+
+      } catch(error) {
+        showLoading(false);
+        const errorMsg = 'Error: ' + error.message;
+        alert(errorMsg);
+        speak(errorMsg);
+        console.error(error);
+      }
+    }
+
+    // ========================================
+    // DISPLAY ROUTE ON MAP
+    // ========================================
+    function displayRoute(data, sourceLat, sourceLng, destLat, destLng) {
+      const path = data.path;
+      
+      // Add markers
+      startMarker = L.marker([sourceLat, sourceLng], {
+        icon: L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        })
+      }).addTo(map).bindPopup('🏁 Start');
+
+      endMarker = L.marker([destLat, destLng], {
+        icon: L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        })
+      }).addTo(map).bindPopup('🏆 Destination');
+
+      // Draw route
+      const color = currentMode === 'car' ? '#667eea' : currentMode === 'bike' ? '#f59e0b' : '#10b981';
+      routeLayer = L.polyline(path, {
+        color: color,
+        weight: 6,
+        opacity: 0.8
+      }).addTo(map);
+
+      map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+
+      // Display info
+      const duration = calculateDuration(data.duration);
+      const sourceCity = document.getElementById('sourceCity').value;
+      const destCity = document.getElementById('destCity').value;
+      
+      document.getElementById('routeInfo').style.display = 'block';
+      document.getElementById('routeDetails').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px;">
+          <div><strong>🗺️ Cities:</strong> ${data.pathNodes}</div>
+          <div><strong>📍 Waypoints:</strong> ${data.pathPoints}</div>
+          <div><strong>📏 Distance:</strong> ${data.distance.toFixed(1)} km</div>
+          <div><strong>⏱️ Duration:</strong> ${duration}</div>
+          <div><strong>🚗 Mode:</strong> ${currentMode.toUpperCase()}</div>
+          <div><strong>⚡ Algorithm:</strong> Dijkstra</div>
+        </div>
+      `;
+
+      // Start animation
+      setTimeout(() => {
+        startAnimation(path);
+        
+        // Speak route info after animation starts
+        setTimeout(() => speakRouteInfo(), 500);
+      }, 500);
+    }
+
+    // ========================================
+    // ANIMATE MARKER (requestAnimationFrame)
+    // ========================================
+    function startAnimation(path) {
+      const icon = currentMode === 'car' ? '🚗' : currentMode === 'bike' ? '🚴' : '🚶';
+      animatedMarker = L.marker(path[0], {
+        icon: L.divIcon({
+          html: `<div style="font-size:28px;">${icon}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(map);
+
+      let currentIndex = 0;
+      let lastTime = performance.now();
+      const speed = currentMode === 'car' ? 3.0 : currentMode === 'bike' ? 2.0 : 1.0;
+
+      function animate(currentTime) {
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+
+        const pointsPerSecond = speed * 8;
+        const advance = (pointsPerSecond * deltaTime) / 1000;
+        currentIndex += advance;
+
+        if(currentIndex >= path.length - 1) {
+          animatedMarker.setLatLng(path[path.length - 1]);
+          console.log('✅ Animation complete!');
+          return;
+        }
+
+        const idx = Math.floor(currentIndex);
+        const fraction = currentIndex - idx;
+        const p1 = path[idx];
+        const p2 = path[Math.min(idx + 1, path.length - 1)];
+        
+        const lat = p1[0] + (p2[0] - p1[0]) * fraction;
+        const lng = p1[1] + (p2[1] - p1[1]) * fraction;
+        
+        animatedMarker.setLatLng([lat, lng]);
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    }
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    function clearMap() {
+      if(routeLayer) map.removeLayer(routeLayer);
+      if(animatedMarker) map.removeLayer(animatedMarker);
+      if(startMarker) map.removeLayer(startMarker);
+      if(endMarker) map.removeLayer(endMarker);
+      if(animationFrameId) cancelAnimationFrame(animationFrameId);
+      document.getElementById('routeInfo').style.display = 'none';
+      routeData = null;
+      
+      // Stop any ongoing speech
+      if(speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    function calculateDuration(minutes) {
+      const adjustedMin = currentMode === 'car' ? minutes : currentMode === 'bike' ? minutes * 1.5 : minutes * 3;
+      const hours = Math.floor(adjustedMin / 60);
+      const mins = Math.round(adjustedMin % 60);
+      return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    }
+  </script>
+</body>
+</html>

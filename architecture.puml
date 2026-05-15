@@ -1,0 +1,300 @@
+@startuml Route Optimization System Architecture
+
+!define RECTANGLE class
+
+' ==========================================
+' FRONTEND LAYER
+' ==========================================
+package "Frontend Layer (Browser)" #E8F5E9 {
+  
+  class "demo-route-finder.html" as Frontend {
+    + Leaflet.js Map
+    + Web Speech API
+    --
+    + initMap()
+    + findRoute()
+    + displayRoute()
+    + startAnimation()
+    + startVoiceInput()
+    + speakRouteInfo()
+    --
+    - CITY_COORDS: Map
+    - recognition: SpeechRecognition
+    - speechSynthesis: SpeechSynthesis
+  }
+  
+  class "User Interface Components" as UI {
+    + Source Input (🎤)
+    + Destination Input (🎤)
+    + Travel Mode Selector
+    + Find Route Button
+    + Map Container
+    + Route Info Panel
+    + Voice Indicator
+    + Speak Button (🔊)
+  }
+  
+  class "Voice Recognition" as VoiceIn {
+    + startVoiceInput(target)
+    + stopVoiceInput()
+    + cleanCityName(text)
+    --
+    Events:
+    - onstart
+    - onresult
+    - onerror
+    - onend
+  }
+  
+  class "Voice Synthesis" as VoiceOut {
+    + speak(text, rate)
+    + speakRouteInfo()
+    --
+    Properties:
+    - lang: en-IN
+    - rate: 0.95
+    - volume: 1.0
+  }
+  
+  class "Animation Controller" as Animation {
+    + startAnimation(path)
+    + animateMarker(currentTime)
+    + clearMap()
+    --
+    - animationFrameId
+    - currentIndex
+    - speed multiplier
+  }
+  
+  Frontend *-- UI
+  Frontend *-- VoiceIn
+  Frontend *-- VoiceOut
+  Frontend *-- Animation
+}
+
+' ==========================================
+' COMMUNICATION LAYER
+' ==========================================
+package "Communication Layer" #FFF3E0 {
+  
+  class "HTTP Request" as HTTPReq {
+    + Method: GET
+    + URL: /route
+    + Params: source, destination
+    --
+    Example:
+    /route?source=13.08,80.27
+          &destination=8.08,77.53
+  }
+  
+  class "HTTP Response" as HTTPResp {
+    + status: string
+    + distance: double
+    + duration: double
+    + pathNodes: int
+    + pathPoints: int
+    + path: Array<[lat,lng]>
+  }
+  
+  HTTPReq ..> HTTPResp : Returns
+}
+
+' ==========================================
+' BACKEND LAYER
+' ==========================================
+package "Backend Layer (Java)" #E3F2FD {
+  
+  class RouteServer {
+    - port: 8080
+    - graph: Graph
+    --
+    + main(String[] args)
+    + start()
+    + handleRequest(HttpExchange)
+    - parseQueryParams(String)
+    - buildJsonResponse(Result)
+    - enableCORS(HttpExchange)
+  }
+  
+  class Graph {
+    - adjacencyList: Map<Node, List<Edge>>
+    - nodes: List<Node>
+    --
+    + addNode(Node)
+    + addEdge(Node, Node, double)
+    + getEdges(Node)
+    + getNodes()
+    + findNearestNode(lat, lng)
+    + loadSampleData()
+  }
+  
+  class Node {
+    - id: String
+    - latitude: double
+    - longitude: double
+    - name: String
+    --
+    + distanceTo(Node): double
+    + equals(Object): boolean
+    + hashCode(): int
+    + toString(): String
+  }
+  
+  class Edge {
+    - source: Node
+    - destination: Node
+    - weight: double
+    --
+    + getSource(): Node
+    + getDestination(): Node
+    + getWeight(): double
+  }
+  
+  class DijkstraAlgorithm {
+    - graph: Graph
+    --
+    + findShortestPath(start, end): Result
+    + getDetailedPathCoordinates(int): List
+    - reconstructPath(prev, end): List
+    --
+    Algorithm: Priority Queue
+    Complexity: O((V+E)log V)
+  }
+  
+  class Result {
+    + path: List<Node>
+    + distance: double
+    + duration: double
+    --
+    + getPathCoordinates(): List<double[]>
+  }
+  
+  RouteServer *-- Graph
+  RouteServer ..> DijkstraAlgorithm : Uses
+  Graph *-- "1..*" Node
+  Graph *-- "1..*" Edge
+  Edge --> "2" Node : Connects
+  DijkstraAlgorithm ..> Graph : Reads
+  DijkstraAlgorithm ..> Result : Returns
+}
+
+' ==========================================
+' DATA LAYER
+' ==========================================
+package "Data Layer" #F3E5F5 {
+  
+  class "City Database" as CityDB {
+    15 Major Cities:
+    - Delhi, Mumbai, Bangalore
+    - Kolkata, Chennai, Hyderabad
+    - Pune, Ahmedabad, Jaipur
+    - Lucknow, Surat, Indore
+    - Nagpur, Bhopal, Vadodara
+    
+    38 Tamil Nadu Districts:
+    - Chennai, Coimbatore, Madurai
+    - Salem, Tiruchirappalli, Vellore
+    - Kanyakumari, Tirunelveli, etc.
+    --
+    Total Locations: 53
+  }
+  
+  class "Road Network" as RoadNetwork {
+    Edge Connections:
+    - Inter-city highways
+    - Tamil Nadu internal roads
+    - Distance in kilometers
+    --
+    Total Edges: ~100+
+  }
+  
+  Graph ..> CityDB : Loads
+  Graph ..> RoadNetwork : Builds
+}
+
+' ==========================================
+' EXTERNAL APIs
+' ==========================================
+package "Browser APIs" #FFE0B2 {
+  
+  interface "Web Speech API" as SpeechAPI {
+    + SpeechRecognition
+    + SpeechSynthesis
+    --
+    Language: en-IN
+    Browser: Chrome, Edge
+  }
+  
+  interface "Leaflet.js API" as LeafletAPI {
+    + L.map()
+    + L.tileLayer()
+    + L.marker()
+    + L.polyline()
+    --
+    Tiles: OpenStreetMap
+  }
+  
+  interface "Fetch API" as FetchAPI {
+    + fetch(url, options)
+    + Response.json()
+    --
+    CORS: Enabled
+  }
+  
+  VoiceIn ..> SpeechAPI : Uses
+  VoiceOut ..> SpeechAPI : Uses
+  Frontend ..> LeafletAPI : Renders
+  Frontend ..> FetchAPI : Calls
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+Frontend --> HTTPReq : "1. Sends Request"
+HTTPReq --> RouteServer : "2. HTTP GET"
+RouteServer --> Graph : "3. Find Nearest Nodes"
+Graph --> DijkstraAlgorithm : "4. Calculate Route"
+DijkstraAlgorithm --> Result : "5. Generate Result"
+Result --> HTTPResp : "6. Build JSON"
+HTTPResp --> Frontend : "7. Return Response"
+Frontend --> Animation : "8. Start Animation"
+Frontend --> VoiceOut : "9. Speak Results"
+
+' ==========================================
+' NOTES
+' ==========================================
+note right of Frontend
+  **User Interaction Flow:**
+  1. User speaks/types city names
+  2. Clicks "Find Route"
+  3. Map displays path
+  4. Marker animates
+  5. Voice narrates results
+end note
+
+note right of DijkstraAlgorithm
+  **Algorithm Details:**
+  - Uses Priority Queue (Min-Heap)
+  - Haversine distance calculation
+  - Path interpolation (10 points/segment)
+  - Optimizes for shortest distance
+end note
+
+note bottom of RouteServer
+  **Server Configuration:**
+  - Port: 8080
+  - Protocol: HTTP
+  - CORS: Enabled
+  - Endpoint: /route
+  - Format: JSON
+end note
+
+note left of CityDB
+  **Data Coverage:**
+  - 15 major Indian cities
+  - 38 Tamil Nadu districts
+  - Accurate GPS coordinates
+  - Real distance calculations
+end note
+
+@enduml
